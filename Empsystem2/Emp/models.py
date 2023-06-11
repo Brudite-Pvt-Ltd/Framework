@@ -1,6 +1,8 @@
 from django.db import models
 from Dep.models import Dep_system
 
+# creating Model class for Department
+
 
 class Emp_system(models.Model):
 

@@ -1,5 +1,8 @@
+# Importing necessary dependencies and modules
 from rest_framework import serializers
 from .models import Dep_system
+
+# creating ModelSerializer
 
 
 class DepSerializer(serializers.ModelSerializer):
