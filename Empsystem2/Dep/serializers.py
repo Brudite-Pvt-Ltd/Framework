@@ -2,7 +2,7 @@
 from rest_framework import serializers
 from .models import Dep_system
 
-# creating ModelSerializer
+# creating ModelSerializer for Employment
 
 
 class DepSerializer(serializers.ModelSerializer):

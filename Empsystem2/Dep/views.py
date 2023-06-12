@@ -1,4 +1,4 @@
-# Importing necessary dependencies and modules for the Django REST framework API view
+# Importing necessary dependencies and modules for the DRF API view
 
 from django.shortcuts import render
 from rest_framework.decorators import api_view
@@ -8,7 +8,7 @@ from .serializers import DepSerializer
 from rest_framework import status
 from Emp.serializers import EmpSerializer
 from collections import OrderedDict
-
+import json
 # Create a API View for Retrieving the Data of Department
 
 
@@ -73,21 +73,66 @@ def AllEmpSalary(request, DN):
     if request.method == 'GET':
         # Retrieve the Dep_system object based on the provided DepName
         dep = Dep_system.objects.get(DepName=DN)
-        # Retrieve all associated emp_system objects for the Dep_system object
-        a = dep.emp_system_set.all()
+        # Retreive all employees
+        employees = dep.emp_system_set.all()
+        serial = EmpSerializer(employees, many=True)
+        data = serial.data
+        salaries = [item['Salary'] for item in data]
+        sum_of_salaries = sum(salaries)
+        return Response(sum_of_salaries, status=status.HTTP_202_ACCEPTED)
+
+        """
+        #  This is another method to get sum of all employees salary in a deaprtment by 
+        # ordering all salary and then making a empty list and storing salaries of all employee
+        # in dict format and then again convert it into the list format which conatains salary only in salaries 
+        # attribute
+        
+        employees = dep.emp_system_set.order_by('Salary')
+        Result = []
+        for i in employees:
+            data = {
+                "Salary": i.Salary
+            }
+            Result.append(data)
+        salaries = []
+        for j in range(len(Result)):
+            salaries.append(Result[j]['Salary'])
+        sum_salary = sum(salaries)
+        return Response(sum_salary, status=status.HTTP_202_ACCEPTED)
+        """
+
+
+""" This function is defined to get the top 3 salaries in a particular department"""
+
+
+@api_view(['GET'])
+def Top3Salary(request, DN):
+    if request.method == 'GET':
+        # Retrieve the Dep_system object based on the provided DepName
+        dep = Dep_system.objects.get(DepName=DN)
+        # Retrieve all associated emp_system objects for the Dep_system object in order of top 3 salary
+        a = dep.emp_system_set.order_by('-Salary')[:3]
         serial = EmpSerializer(a, many=True)
-        # Convert the serialized data to a Python list
-        python_list = list(serial.data.items())
-        print(python_list)
         return Response(serial.data, status=status.HTTP_202_ACCEPTED)
 
-# b = (len(serial.data))
-        # c = serial.data
-        # print(type(c))
-        # d = []
-        # for item in serial.data:
-        #     d.append(item)
 
-        # li = []
-        # for i in d[0]:
-        #     li.append(i)
+""" This function is defined to get the top 3 salaries in a particular department and the Name of employee and its Salary"""
+
+
+@api_view(['GET'])
+def Top3Salarya(request, DN):
+    if request.method == 'GET':
+        # Retrieve the Dep_system object based on the provided DepName
+        dep = Dep_system.objects.get(DepName=DN)
+        # Retrieve the top 3 emp_system objects for the Dep_system object in order of top salary
+        employees = dep.emp_system_set.order_by('-Salary')[:3]
+        result = []
+        for i in employees:
+            print(i)
+            data = {
+                'Name': i.Name,
+                'Salary': i.Salary
+            }
+            result.append(data)
+
+        return Response(result, status=status.HTTP_202_ACCEPTED)
