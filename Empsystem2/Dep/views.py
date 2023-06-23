@@ -13,12 +13,12 @@ import json
 
 
 @api_view(['GET', 'POST', 'PUT', 'DELETE'])
-def Dep_API(request):
+def Dep_API(request, pk):
     if request.method == 'GET':
-        id = request.data.get('id')
-        if id is not None:
+        # id = request.data.get('id')
+        if pk is not 0:
             # Retrieve a specific Dep_system object based on the provided ID
-            dep = Dep_system.objects.get(id=id)
+            dep = Dep_system.objects.get(id=pk)
             serial = DepSerializer(dep)
             return Response(serial.data)
         else:
@@ -37,7 +37,7 @@ def Dep_API(request):
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
     elif request.method == 'PUT':
-        id = request.data.get('id')
+        id = request.data.get('DepName')
         # Retrieve an existing Dep_system object based on the provided ID
         dep = Dep_system.objects.get(pk=id)
         # Update the Dep_system object with the provided data
@@ -75,6 +75,8 @@ def AllEmpSalary(request, DN):
         dep = Dep_system.objects.get(DepName=DN)
         # Retreive all employees
         employees = dep.emp_system_set.all()
+        print(type(employees))
+
         serial = EmpSerializer(employees, many=True)
         data = serial.data
         salaries = [item['Salary'] for item in data]
