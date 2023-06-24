@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.http import JsonResponse
 from googleapiclient.discovery import build
-from .google_calender import get_credentials
+# from .google_calender import get_credentials
 from .models import Interview
 from datetime import timedelta
 from google_auth_oauthlib.flow import Flow
@@ -12,6 +12,7 @@ from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 import pickle
 from datetime import datetime
+
 
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 
@@ -49,11 +50,11 @@ def create_event(credentials, interview):
                        f"Remarks: {interview.remarks}",
         'start': {
             'dateTime': interview_time.isoformat(),
-            'timeZone': 'Asia/Kolkata',  # Replace with your desired time zone
+            'timeZone': 'Asia/Kolkata',
         },
         'end': {
             'dateTime': (interview_time + timedelta(hours=1)).isoformat(),
-            'timeZone': 'Asia/Kolkata',  # Replace with your desired time zone
+            'timeZone': 'Asia/Kolkata',
         },
         'attendees': [
             {'email': interview.candidate_email},
@@ -87,10 +88,8 @@ def schedule_interview(request):
             include_granted_scopes='true'
         )
 
-        # Credentials obtained successfully
         # You can now use the credentials to make API requests
         credentials = flow.credentials
-
         # Save the credentials for future use
         save_credentials(credentials)
     else:
@@ -136,23 +135,59 @@ def schedule_interview(request):
         return render(request, 'schedule_interview.html')
 
 
-def update_interview_time(credentials, interview_id, new_interview_time):
-    service = build('calendar', 'v3', credentials=credentials)
+def interview_management(request):
+    return render(request, 'interview_management.html')
 
-    interview = Interview.objects.get(id=interview_id)
-    old_interview_time = interview.interview_time
 
-    event = service.events().get(calendarId='primary',
-                                 eventId=interview.event_id).execute()
+def Delete_interview(request):
+    stored_credentials = get_credentials()
+    if stored_credentials is not None:
+        credentials = stored_credentials
+    elif 'code' in request.GET:
+        # Authorization code is present in the query parameters
+        authorization_code = request.GET['code']
+        flow = Flow.from_client_secrets_file(
+            'D:\Django\Framework\VMS_GC\Interview_Det\Credentials.json',
+            scopes=['https://www.googleapis.com/auth/calendar'])
+        flow.redirect_uri = 'http://127.0.0.1:8000/update-interview-time/'
 
-    event['start']['dateTime'] = new_interview_time.isoformat()
-    event['end']['dateTime'] = (
-        new_interview_time + timedelta(hours=1)).isoformat()
+        # Exchange the authorization code for credentials
+        flow.fetch_token(
+            authorization_response=request.build_absolute_uri(),
+            code=authorization_code,
+            access_type='offline',
+            include_granted_scopes='true'
+        )
 
-    updated_event = service.events().update(
-        calendarId='primary', eventId=interview.event_id, body=event).execute()
+        print("Credentials obtained successfully")
+        # You can now use the credentials to make API requests
+        credentials = flow.credentials
+        # Save the credentials for future use
+        save_credentials(credentials)
+    else:
+        # Authorization code is not present
+        # Redirect the user to the authorization URL
+        flow = Flow.from_client_secrets_file(
+            'D:\Django\Framework\VMS_GC\Interview_Det\Credentials.json',
+            scopes=['https://www.googleapis.com/auth/calendar'])
+        flow.redirect_uri = 'http://127.0.0.1:8000/update-interview-time/'
+        authorization_url, state = flow.authorization_url(
+            access_type='offline',
+            include_granted_scopes='true')
+        return redirect(authorization_url)
 
-    interview.interview_time = new_interview_time
-    interview.save()
+    if request.method == 'POST':
+        event_id = request.POST.get('event_id')
+        service = build('calendar', 'v3', credentials=credentials)
+        try:
+            event = service.events().get(calendarId='primary', eventId=event_id).execute()
+            # Delete the interview
+            try:
+                service.events().delete(calendarId='primary', eventId=event_id).execute()
+                return HttpResponse("Event Deleted successfully")
+            except:
+                return HttpResponseBadRequest("Failed to delete the old event.")
+        except:
+            return HttpResponseBadRequest("Event not found.")
 
-    return updated_event['id']
+    return render(request, 'delete_interview.html')
